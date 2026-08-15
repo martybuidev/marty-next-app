@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-import { BFF_AUTH_ENDPOINTS, REQUEST_TIMEOUT_MS } from './constant';
-import { TAuthSession } from '../lib/auth/types';
 import { clientEnv } from '../env/client';
+import { bffSession } from '../lib/auth/auth-api.client';
+import { TAuthSession } from '../lib/auth/types';
+import { REQUEST_TIMEOUT_MS } from './constant';
 import { tokenStore } from './token-store';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
@@ -11,31 +12,12 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 
 let refreshPromise: Promise<TAuthSession | null> | null = null;
 
-async function requestSession(): Promise<TAuthSession | null> {
-  try {
-    const response = await fetch(BFF_AUTH_ENDPOINTS.session, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const session = (await response.json()) as TAuthSession;
-
-    return typeof session?.accessToken === 'string' ? session : null;
-  } catch {
-    return null;
-  }
-}
-
 function refreshSession(): Promise<TAuthSession | null> {
-  refreshPromise ??= requestSession().finally(() => {
-    refreshPromise = null;
-  });
+  refreshPromise ??= bffSession()
+    .catch(() => null)
+    .finally(() => {
+      refreshPromise = null;
+    });
   return refreshPromise;
 }
 
