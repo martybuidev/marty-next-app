@@ -1,5 +1,11 @@
-'use server'
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+import { REFRESH_COOKIE_NAME } from './shared/http/constant';
 
 export default async function Home() {
-  return <h1>hello</h1>;
+  const cookieStore = await cookies();
+  const hasSession = cookieStore.has(REFRESH_COOKIE_NAME);
+
+  redirect(hasSession ? '/dashboard' : '/login');
 }
