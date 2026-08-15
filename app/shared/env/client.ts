@@ -1,8 +1,4 @@
-import z from 'zod';
-
-export const clientEnvSchema = z.object({
-  nextPublicApiUrl: z.url(),
-});
+import { clientEnvSchema } from "./client-env.schema";
 
 export const clientEnv = clientEnvSchema.parse({
   nextPublicApiUrl: process.env.NEXT_PUBLIC_API_URL,
