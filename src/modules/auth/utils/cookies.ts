@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
+import { REFRESH_COOKIE_NAME } from '../constants/endpoints.constants';
+import { refreshCookieOptions } from '../constants/cookie-options.server';
 
-import { REFRESH_COOKIE_NAME, refreshCookieOptions } from '../constants';
 
 export async function getRefreshToken(): Promise<string | null> {
   const cookieStore = await cookies();

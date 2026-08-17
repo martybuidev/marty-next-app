@@ -3,7 +3,7 @@ import 'server-only';
 import { serverEnv } from '@/shared/config/server.env';
 import { type TApiError, type TApiSuccess } from '@/shared/types';
 
-import { NEST_AUTH_ENDPOINTS } from './constants';
+import { NEST_AUTH_ENDPOINTS } from './constants/endpoints.constants';
 import { type TLoginInput, type TRegisterInput } from './schemas/auth.schema';
 import { type TAuthTokens, type TAuthUser } from './types';
 

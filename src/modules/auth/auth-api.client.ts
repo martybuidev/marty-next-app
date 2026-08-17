@@ -2,7 +2,7 @@ import 'client-only';
 
 import { type TApiError, type TApiSuccess } from '@/shared/types';
 
-import { BFF_AUTH_ENDPOINTS } from './constants';
+import { BFF_AUTH_ENDPOINTS } from './constants/endpoints.constants';
 import type { TLoginInput, TRegisterInput } from './schemas';
 import type { TAuthSession } from './types';
 

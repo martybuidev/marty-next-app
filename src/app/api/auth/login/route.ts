@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { login } from '@/modules/auth/auth-api.server';
 import { loginSchema } from '@/modules/auth/schemas';
-import { setRefreshCookie, toErrorResponse } from '@/modules/auth/utils';
+import { setRefreshCookie } from '@/modules/auth/utils/cookies';
+import { toErrorResponse } from '@/modules/auth/utils/http';
 
 export const dynamic = 'force-dynamic';
 
