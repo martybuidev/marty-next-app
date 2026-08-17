@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { REFRESH_COOKIE_NAME } from './modules/auth/constants';
+import { REFRESH_COOKIE_NAME } from './modules/auth/constants/endpoints.constants';
 
 export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has(REFRESH_COOKIE_NAME);

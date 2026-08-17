@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { refresh } from '@/modules/auth/auth-api.server';
-
 import {
   clearRefreshCookie,
   getRefreshToken,
   setRefreshCookie,
-} from '../_cookies';
-import { toErrorResponse } from '../_http';
+  toErrorResponse,
+} from '@/modules/auth/utils';
 
 export const dynamic = 'force-dynamic';
 

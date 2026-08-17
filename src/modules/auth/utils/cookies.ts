@@ -2,8 +2,7 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { REFRESH_COOKIE_NAME } from '@/modules/auth/constants';
-import { refreshCookieOptions } from '@/modules/auth/cookie-options.server';
+import { REFRESH_COOKIE_NAME, refreshCookieOptions } from '../constants';
 
 export async function getRefreshToken(): Promise<string | null> {
   const cookieStore = await cookies();

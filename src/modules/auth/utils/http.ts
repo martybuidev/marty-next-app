@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { NestApiError } from '@/modules/auth/auth-api.server';
+import { NestApiError } from '../auth-api.server';
 
 export function toErrorResponse(error: unknown): NextResponse {
   if (error instanceof NestApiError) {
