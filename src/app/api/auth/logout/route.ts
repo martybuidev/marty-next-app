@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { logout } from '@/modules/auth/auth-api.server';
 
 import { clearRefreshCookie, getRefreshToken } from '../_cookies';
-import { logout } from '@/modules/auth/auth-api.server';
 
 export const dynamic = 'force-dynamic';
 

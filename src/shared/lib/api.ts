@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios';
 
 import type { TApiError } from '@/shared/types';
+
 import { clientEnv } from '../config/client.env';
 import { REQUEST_TIMEOUT_MS } from '../constants';
 

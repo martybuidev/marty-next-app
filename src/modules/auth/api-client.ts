@@ -1,11 +1,12 @@
-import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import 'client-only';
+
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 import { createApiClient } from '@/shared/lib/api';
 
 import { bffSession } from './auth-api.client';
-import type { TAuthSession } from './types';
 import { tokenStore } from './token-store';
+import type { TAuthSession } from './types';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retried?: boolean;

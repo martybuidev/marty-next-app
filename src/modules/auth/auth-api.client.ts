@@ -3,8 +3,8 @@ import 'client-only';
 import { type TApiError, type TApiSuccess } from '@/shared/types';
 
 import { BFF_AUTH_ENDPOINTS } from './constants';
-import type {  TAuthSession } from './types';
 import type { TLoginInput, TRegisterInput } from './schemas';
+import type { TAuthSession } from './types';
 
 export class BffApiError extends Error {
   readonly statusCode: number;
