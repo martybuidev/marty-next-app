@@ -140,13 +140,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         expires,
       };
     },
-
     session({ session, token: { id, role, accessToken } }) {
       session.user.id = id as string;
       session.user.role = role as string;
       session.user.accessToken = accessToken as string;
 
       return session;
+    },
+    redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+
+      return baseUrl;
     },
   },
   events: {

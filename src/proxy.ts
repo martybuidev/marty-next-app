@@ -1,15 +1,19 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/auth';
 
 export async function proxy(request: NextRequest) {
   const session = await auth();
 
-  if(!session) {
+  if (!session) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.se
+    loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*'],
-  }
+  matcher: ['/dashboard/:path*'],
+};
