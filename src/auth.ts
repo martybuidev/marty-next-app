@@ -4,7 +4,6 @@ import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 
 import { loginSchema, TAuthResponse } from './modules/auth/auth.schema';
-import { authEnv } from './shared/config/auth.env';
 import { serverEnv } from './shared/config/server.env';
 
 const authFetchOptions = {
@@ -50,10 +49,7 @@ async function logout(refreshToKen: string) {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Google({
-      clientId: authEnv.clientId,
-      clientSecret: authEnv.clientSecret,
-    }),
+    Google,
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
