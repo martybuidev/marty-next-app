@@ -1,42 +1,15 @@
 import { decodeJwt } from 'jose';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import z from 'zod';
 
 import { serverEnv } from './shared/config/server.env';
+import { loginSchema, TAuthResponse } from './modules/auth/auth.schema';
 
 const authFetchOptions = {
   method: 'POST',
   headers: { 'Content-type': 'application/json' },
   cache: 'no-store',
 } as const;
-
-type TAuthResponse = {
-  accessToken: string;
-  refreshToKen: string;
-  user: { id: number; email: string; role: string };
-};
-
-export const loginSchema = z.object({
-  email: z
-    .email()
-    .max(255)
-    .transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(128),
-});
-
-export type TLoginInput = z.infer<typeof loginSchema>;
-
-export const registerSchema = z.object({
-  fullName: z.string().trim().min(1).max(255),
-  email: z
-    .email()
-    .max(255)
-    .transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(128),
-});
-
-export type TRegisterInput = z.infer<typeof registerSchema>;
 
 async function login(email: string, password: string) {
   const res = await fetch(`${serverEnv.apiBaseUrl}/auth/login`, {
@@ -99,7 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           refreshToKen,
         } = result;
         const expires = decodeJwt(accessToken).exp;
-
+        
         return {
           id: String(id),
           email,
@@ -118,7 +91,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
-        token.expires = Date.now() + (user.expires as number);
+        token.expires = (user.expires as number) * 1000;
       }
 
       if (Date.now() < (token.expires as number)) {
@@ -140,11 +113,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         expires,
       };
     },
-    session({ session, token: { id, role, accessToken } }) {
+    session({ session, token: { id, role, accessToken, expires } }) {
       session.user.id = id as string;
       session.user.role = role as string;
       session.user.accessToken = accessToken as string;
-
+      session.user.expires = expires as number;
       return session;
     },
     redirect({ url, baseUrl }) {
