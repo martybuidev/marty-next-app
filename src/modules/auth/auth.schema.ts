@@ -1,11 +1,5 @@
 import z from "zod";
 
-export type TAuthResponse = {
-  accessToken: string;
-  refreshToKen: string;
-  user: { id: number; email: string; role: string };
-};
-
 export const loginSchema = z.object({
   email: z
     .email()

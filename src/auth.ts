@@ -3,7 +3,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 
-import { loginSchema, TAuthResponse } from './modules/auth/auth.schema';
+import { loginSchema } from './modules/auth/auth.schema';
 import { serverEnv } from './shared/config/server.env';
 
 const authFetchOptions = {
@@ -11,6 +11,12 @@ const authFetchOptions = {
   headers: { 'Content-type': 'application/json' },
   cache: 'no-store',
 } as const;
+
+export type TAuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  user: { id: number; email: string; role: string };
+};
 
 async function login(email: string, password: string) {
   const res = await fetch(`${serverEnv.apiBaseUrl}/auth/login`, {
@@ -26,9 +32,9 @@ async function login(email: string, password: string) {
   return body.data as TAuthResponse;
 }
 
-async function refresh(refreshToKen: string) {
+async function refresh(refreshToken: string) {
   const res = await fetch(`${serverEnv.apiBaseUrl}/auth/refresh`, {
-    body: JSON.stringify({ refreshToKen }),
+    body: JSON.stringify({ refreshToken }),
     ...authFetchOptions,
   });
 
@@ -40,9 +46,9 @@ async function refresh(refreshToKen: string) {
   return body.data as TAuthResponse;
 }
 
-async function logout(refreshToKen: string) {
+async function logout(refreshToken: string) {
   await fetch(`${serverEnv.apiBaseUrl}/auth/logout`, {
-    body: JSON.stringify({ refreshToKen }),
+    body: JSON.stringify({ refreshToken }),
     ...authFetchOptions,
   }).catch(() => {});
 }
@@ -70,7 +76,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const {
           user: { id, email, role },
           accessToken,
-          refreshToKen,
+          refreshToken,
         } = result;
         const expires = decodeJwt(accessToken).exp;
 
@@ -79,7 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email,
           role,
           accessToken,
-          refreshToKen,
+          refreshToken,
           expires,
         };
       },
@@ -101,16 +107,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       const refreshed = await refresh(token.refreshToken as string);
       if (!refreshed) {
-        return { ...token, error: 'RefreshTokenError' as const };
+        return { ...token, error: 'refreshTokenError' as const };
       }
 
-      const { accessToken, refreshToKen } = refreshed;
+      const { accessToken, refreshToken } = refreshed;
       const expires = decodeJwt(accessToken).exp;
 
       return {
         ...token,
         accessToken,
-        refreshToKen,
+        refreshToken,
         expires,
       };
     },
