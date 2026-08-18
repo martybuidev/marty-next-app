@@ -1,9 +1,11 @@
 import { decodeJwt } from 'jose';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
 
-import { serverEnv } from './shared/config/server.env';
 import { loginSchema, TAuthResponse } from './modules/auth/auth.schema';
+import { authEnv } from './shared/config/auth.env';
+import { serverEnv } from './shared/config/server.env';
 
 const authFetchOptions = {
   method: 'POST',
@@ -16,12 +18,11 @@ async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     ...authFetchOptions,
   });
+  const body = await res.json();
 
   if (!res.ok) {
     return null;
   }
-
-  const body = await res.json();
 
   return body.data as TAuthResponse;
 }
@@ -49,6 +50,10 @@ async function logout(refreshToKen: string) {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
+    Google({
+      clientId: authEnv.clientId,
+      clientSecret: authEnv.clientSecret,
+    }),
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -72,7 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           refreshToKen,
         } = result;
         const expires = decodeJwt(accessToken).exp;
-        
+
         return {
           id: String(id),
           email,

@@ -20,8 +20,9 @@ export function Form() {
     await signIn('credentials', {
       email,
       password,
-    });    
+    });
   });
+
   return (
     <form onSubmit={onSubmit}>
       <div>
@@ -35,6 +36,9 @@ export function Form() {
         {errors.password?.message}
       </div>
       <button type="submit">Login</button>
+      <button type="button" onClick={()=>signIn('google', { redirectTo: '/' })}>
+        Login with google
+      </button>
     </form>
   );
 }
