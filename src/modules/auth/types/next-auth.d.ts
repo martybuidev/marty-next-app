@@ -8,6 +8,10 @@ declare module 'next-auth' {
     refreshToken?: string;
     expiresAt?: number;
   }
+
+  interface Session {
+    error?: string;
+  }
 }
 
 declare module 'next-auth/jwt' {
