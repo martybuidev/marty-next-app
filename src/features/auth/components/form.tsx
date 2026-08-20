@@ -20,6 +20,7 @@ export function Form() {
     await signIn('credentials', {
       email,
       password,
+      redirectTo: '/'
     });
   });
 

@@ -18,21 +18,32 @@ export type TAuthResponse = {
   user: { id: number; email: string; role: string };
 };
 
-async function login(email: string, password: string) {
+export enum EAuthProvider {
+  CREDENTIAL = 'credential',
+  GOOGLE = 'google',
+}
+
+async function login(payload: {
+  provider: EAuthProvider;
+  email?: string;
+  password?: string;
+  token?: string;
+}) {
+  
   const res = await fetch(`${serverEnv.apiBaseUrl}/auth/login`, {
-    body: JSON.stringify({ email, password }),
     ...authFetchOptions,
+    body: JSON.stringify(payload),
   });
-  const body = await res.json();
 
   if (!res.ok) {
     return null;
   }
 
-  return body.data as TAuthResponse;
+  const data = await res.json();  
+  return data.data as TAuthResponse;
 }
 
-async function refresh(refreshToken: string) {
+async function getRefreshToken(refreshToken: string) {
   const res = await fetch(`${serverEnv.apiBaseUrl}/auth/refresh`, {
     body: JSON.stringify({ refreshToken }),
     ...authFetchOptions,
@@ -68,7 +79,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const result = await login(parsed.data.email, parsed.data.password);
+        const result = await login({
+          provider: EAuthProvider.CREDENTIAL,
+          email: parsed.data.email,
+          password: parsed.data.password,
+        });
         if (!result) {
           return null;
         }
@@ -78,7 +93,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           accessToken,
           refreshToken,
         } = result;
-        const expires = decodeJwt(accessToken).exp;
+        const expiresAt = decodeJwt(accessToken).exp;
 
         return {
           id: String(id),
@@ -86,52 +101,74 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role,
           accessToken,
           refreshToken,
-          expires,
+          expiresAt,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account?.provider === EAuthProvider.GOOGLE && account.id_token) {
+        const result = await login({
+          provider: EAuthProvider.GOOGLE,
+          token: account.id_token,
+        });
+
+        if (result) {
+          token.id = String(result.user.id);
+          token.role = result.user.role;
+          token.accessToken = result.accessToken;
+          token.refreshToken = result.refreshToken;
+          token.expiresAt =
+            (decodeJwt(result.accessToken).exp as number) * 1000;
+          return token;
+        }
+      }
+
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
-        token.expires = (user.expires as number) * 1000;
-      }
-
-      if (Date.now() < (token.expires as number)) {
+        token.expiresAt = (user.expiresAt as number) * 1000;
         return token;
       }
 
-      const refreshed = await refresh(token.refreshToken as string);
+      if (Date.now() < (token.expiresAt as number)) {
+        return token;
+      }
+
+      const refreshed = await getRefreshToken(token.refreshToken as string);
       if (!refreshed) {
         return { ...token, error: 'refreshTokenError' as const };
       }
 
       const { accessToken, refreshToken } = refreshed;
-      const expires = decodeJwt(accessToken).exp;
+      const expiresAt = decodeJwt(accessToken).exp;
 
       return {
         ...token,
         accessToken,
         refreshToken,
-        expires,
+        expiresAt,
       };
     },
-    session({ session, token: { id, role, accessToken, expires } }) {
+    
+    session({ session, token: { id, role, accessToken, expiresAt } }) {
       session.user.id = id as string;
       session.user.role = role as string;
       session.user.accessToken = accessToken as string;
-      session.user.expires = expires as number;
+      session.user.expiresAt = expiresAt as number;
       return session;
     },
+
     redirect({ url, baseUrl }) {
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-
+      else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
       return baseUrl;
     },
   },
