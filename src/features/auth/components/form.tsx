@@ -1,10 +1,9 @@
 'use client';
 
+import { loginSchema, TLoginInput } from '@/modules/auth/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
-
-import { loginSchema, TLoginInput } from '@/modules/auth/auth.schema';
 
 export function Form() {
   const {
@@ -37,8 +36,17 @@ export function Form() {
         {errors.password?.message}
       </div>
       <button type="submit">Login</button>
-      <button type="button" onClick={()=>signIn('google', { redirectTo: '/' })}>
-        Login with google
+      <br />
+      <button type="button" onClick={()=>signIn('google', { redirectTo: '/' }, { prompt: 'select_account' })}>
+        Login with Google
+      </button>
+      <br />
+      <button type="button" onClick={()=>signIn('github', { redirectTo: '/' }, { prompt: 'consent' })}>
+        Login with Github
+      </button>
+      <br />
+      <button type="button" onClick={()=>signIn('facebook', { redirectTo: '/' }, { prompt: 'reauthenticate' })}>
+        Login with Facebook
       </button>
     </form>
   );

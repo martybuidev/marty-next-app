@@ -1,9 +1,16 @@
-import { decodeJwt } from 'jose';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import Facebook from 'next-auth/providers/facebook';
+import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 
-import { loginSchema } from './modules/auth/auth.schema';
+import { loginSchema } from './modules/auth/schemas';
+import {
+  AUTH_PROVIDER,
+  TAuthProvider,
+  TAuthResponse,
+} from './modules/auth/types';
+import { buildAuthToken } from './modules/auth/utils';
 import { serverEnv } from './shared/config/server.env';
 
 const authFetchOptions = {
@@ -12,25 +19,8 @@ const authFetchOptions = {
   cache: 'no-store',
 } as const;
 
-export type TAuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-  user: { id: number; email: string; role: string };
-};
-
-export enum EAuthProvider {
-  CREDENTIAL = 'credential',
-  GOOGLE = 'google',
-}
-
-async function login(payload: {
-  provider: EAuthProvider;
-  email?: string;
-  password?: string;
-  token?: string;
-}) {
-  
-  const res = await fetch(`${serverEnv.apiBaseUrl}/auth/login`, {
+async function fetching(url: string, payload: unknown) {
+  const res = await fetch(`${serverEnv.apiBaseUrl}/auth/${url}`, {
     ...authFetchOptions,
     body: JSON.stringify(payload),
   });
@@ -39,34 +29,35 @@ async function login(payload: {
     return null;
   }
 
-  const data = await res.json();  
+  const data = await res.json();
   return data.data as TAuthResponse;
 }
 
+async function login(payload: {
+  provider: TAuthProvider;
+  email?: string;
+  password?: string;
+  token?: string;
+}) {
+  return fetching('login', payload);
+}
+
 async function getRefreshToken(refreshToken: string) {
-  const res = await fetch(`${serverEnv.apiBaseUrl}/auth/refresh`, {
-    body: JSON.stringify({ refreshToken }),
-    ...authFetchOptions,
-  });
-
-  if (!res.ok) {
-    return null;
-  }
-
-  const body = await res.json();
-  return body.data as TAuthResponse;
+  return fetching('refresh', { refreshToken });
 }
 
 async function logout(refreshToken: string) {
   await fetch(`${serverEnv.apiBaseUrl}/auth/logout`, {
     body: JSON.stringify({ refreshToken }),
     ...authFetchOptions,
-  }).catch(() => {});
+  });
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google,
+    GitHub,
+    Facebook,
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -80,7 +71,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const result = await login({
-          provider: EAuthProvider.CREDENTIAL,
+          provider: AUTH_PROVIDER.credentials,
           email: parsed.data.email,
           password: parsed.data.password,
         });
@@ -88,72 +79,58 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const {
-          user: { id, email, role },
-          accessToken,
-          refreshToken,
-        } = result;
-        const expiresAt = decodeJwt(accessToken).exp;
-
-        return {
-          id: String(id),
-          email,
-          role,
-          accessToken,
-          refreshToken,
-          expiresAt,
-        };
+        return buildAuthToken({}, result);
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      if (account?.provider === EAuthProvider.GOOGLE && account.id_token) {
-        const result = await login({
-          provider: EAuthProvider.GOOGLE,
-          token: account.id_token,
-        });
+      // First time login with credentials
+      if (account?.provider === AUTH_PROVIDER.credentials) {
+        return { ...token, ...user };
+      }
 
-        if (result) {
-          token.id = String(result.user.id);
-          token.role = result.user.role;
-          token.accessToken = result.accessToken;
-          token.refreshToken = result.refreshToken;
-          token.expiresAt =
-            (decodeJwt(result.accessToken).exp as number) * 1000;
+      // First time login with OAuth
+      if (account) {
+        const provider = account.provider as keyof typeof AUTH_PROVIDER;
+        const validProvider = AUTH_PROVIDER[provider];
+
+        if (!validProvider) {
           return token;
         }
+
+        const oauthToken = account.id_token || account.access_token;
+        const result = await login({
+          provider: validProvider,
+          token: oauthToken,
+        });
+
+        if (!result) {
+          throw new Error('BackendAuthFailed');
+        }
+
+        return buildAuthToken(token, result);
       }
 
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.accessToken = user.accessToken;
-        token.refreshToken = user.refreshToken;
-        token.expiresAt = (user.expiresAt as number) * 1000;
-        return token;
-      }
-
+      // Valid token exp
       if (Date.now() < (token.expiresAt as number)) {
         return token;
       }
 
+      if (!token.refreshToken) {
+        return { ...token, error: 'refreshTokenError' as const };
+      }
+
+      // Refresh new token
       const refreshed = await getRefreshToken(token.refreshToken as string);
+
       if (!refreshed) {
         return { ...token, error: 'refreshTokenError' as const };
       }
 
-      const { accessToken, refreshToken } = refreshed;
-      const expiresAt = decodeJwt(accessToken).exp;
-
-      return {
-        ...token,
-        accessToken,
-        refreshToken,
-        expiresAt,
-      };
+      return buildAuthToken(token, refreshed);
     },
-    
+
     session({ session, token: { id, role, accessToken, expiresAt } }) {
       session.user.id = id as string;
       session.user.role = role as string;
@@ -165,8 +142,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     redirect({ url, baseUrl }) {
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
-      }
-      else if (new URL(url).origin === baseUrl) {
+      } else if (new URL(url).origin === baseUrl) {
         return url;
       }
       return baseUrl;
@@ -181,6 +157,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
   session: {
     strategy: 'jwt',

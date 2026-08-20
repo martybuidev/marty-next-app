@@ -6,7 +6,8 @@ export default function Home() {
   const session = useSession();
   return (
     <>
-      {session.data?.user?.email}
+    Access Token for testing
+      {session.data?.user?.accessToken}
       <button onClick={() => signOut({ redirectTo: '/login' })}>Log out</button>
     </>
   );
